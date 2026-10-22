@@ -1,0 +1,65 @@
+{
+  "entities": {
+    "Employee": {
+      "title": "Employee",
+      "description": "Colaborador de la dotación de la planta industrial",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "sector": { "type": "string", "enum": ["PROD", "CYD", "MANT", "CAL"] },
+        "totalDays": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "sector", "totalDays"]
+    },
+    "VacationRequest": {
+      "title": "VacationRequest",
+      "description": "Solicitud de período de vacaciones de un colaborador",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "sector": { "type": "string", "enum": ["PROD", "CYD", "MANT", "CAL"] },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "days": { "type": "number" },
+        "status": { "type": "string" },
+        "requestedAt": { "type": "string" },
+        "resolutionNote": { "type": "string" },
+        "supervisedBy": { "type": "string" },
+        "supervisedAt": { "type": "string" }
+      },
+      "required": ["id", "employeeId", "employeeName", "sector", "startDate", "endDate", "days", "status", "requestedAt"]
+    },
+    "PlantConfig": {
+      "title": "PlantConfig",
+      "description": "Parámetros y cupos de la planta",
+      "type": "object",
+      "properties": {
+        "plantName": { "type": "string" },
+        "maxSimultaneousProd": { "type": "number" },
+        "maxSimultaneousCyd": { "type": "number" },
+        "maxSimultaneousMant": { "type": "number" },
+        "maxSimultaneousCal": { "type": "number" },
+        "allowAutoApproval": { "type": "boolean" }
+      },
+      "required": ["plantName", "maxSimultaneousProd", "maxSimultaneousCyd", "allowAutoApproval"]
+    }
+  },
+  "firestore": {
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Colección de colaboradores de la dotación activa de la planta"
+    },
+    "/vacation_requests/{requestId}": {
+      "schema": "VacationRequest",
+      "description": "Colección de solicitudes de vacaciones registradas y auditadas"
+    },
+    "/plant_config/{configId}": {
+      "schema": "PlantConfig",
+      "description": "Configuración y reglas operativas de la planta"
+    }
+  }
+}

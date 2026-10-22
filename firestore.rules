@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    match /employees/{employeeId} {
+      allow read: if true;
+      allow create, update: if isValidId(employeeId) 
+        && request.resource.data.name is string
+        && request.resource.data.sector is string
+        && request.resource.data.totalDays is number;
+      allow delete: if isValidId(employeeId);
+    }
+
+    match /vacation_requests/{requestId} {
+      allow read: if true;
+      allow create, update: if isValidId(requestId)
+        && request.resource.data.employeeId is string
+        && request.resource.data.startDate is string
+        && request.resource.data.endDate is string
+        && request.resource.data.days is number;
+      allow delete: if isValidId(requestId);
+    }
+
+    match /plant_config/{configId} {
+      allow read: if true;
+      allow write: if isValidId(configId);
+    }
+
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -69,9 +69,14 @@ export const Header: React.FC<HeaderProps> = ({
                   {isSupervisor ? '🛡️ Supervisor' : '👷 Colaborador'}
                 </span>
               </span>
-              <span className="text-[11px] text-slate-400 whitespace-nowrap font-medium hidden sm:inline">
-                Gestión de Vacaciones de Planta SFA
-              </span>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 whitespace-nowrap font-medium hidden sm:inline-flex">
+                <span>Gestión de Vacaciones de Planta SFA</span>
+                <span className="text-slate-600">·</span>
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>En vivo (Nube)</span>
+                </span>
+              </div>
             </div>
           </div>
 

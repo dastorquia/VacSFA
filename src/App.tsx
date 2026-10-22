@@ -34,6 +34,18 @@ import {
   formatDisplayDate,
   calculateEndDate
 } from './utils/vacationEngine';
+import { testFirestoreConnection } from './lib/firebase';
+import { 
+  subscribeToEmployees, 
+  subscribeToRequests, 
+  subscribeToConfig,
+  syncSaveEmployee,
+  syncDeleteEmployee,
+  syncSaveRequest,
+  syncDeleteRequest,
+  syncUpdateConfig,
+  syncResetAllData
+} from './services/firestoreSync';
 
 const STORAGE_KEYS = {
   EMPLOYEES: 'vacsfa_employees_v2',
@@ -81,6 +93,7 @@ export default function App() {
   });
 
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(true);
 
   // State initialization with localStorage fallback and automatic sector upgrade
   const [employees, setEmployees] = useState<Employee[]>(() => {
@@ -131,6 +144,35 @@ export default function App() {
   const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Real-time synchronization across devices (Mobile <-> Web)
+  useEffect(() => {
+    testFirestoreConnection().then((connected) => {
+      setIsCloudSynced(connected);
+    });
+
+    const unsubEmployees = subscribeToEmployees((remoteEmployees) => {
+      if (remoteEmployees && remoteEmployees.length > 0) {
+        setEmployees(remoteEmployees);
+      }
+    });
+
+    const unsubRequests = subscribeToRequests((remoteRequests) => {
+      setRequests(remoteRequests);
+    });
+
+    const unsubConfig = subscribeToConfig((remoteConfig) => {
+      if (remoteConfig) {
+        setConfig(remoteConfig);
+      }
+    });
+
+    return () => {
+      unsubEmployees();
+      unsubRequests();
+      unsubConfig();
+    };
+  }, []);
 
   // Sync to localStorage
   useEffect(() => {
@@ -207,6 +249,7 @@ export default function App() {
     };
 
     setEmployees((prev) => [...prev, newEmp]);
+    syncSaveEmployee(newEmp).catch(console.error);
     showToast(`Colaborador ${newEmp.name} incorporado a la dotación (${newEmp.sector} · ${newEmp.totalDays}d anuales).`);
   };
 
@@ -219,16 +262,19 @@ export default function App() {
     setEmployees((prev) =>
       prev.map((e) => (e.id === updatedEmp.id ? updatedEmp : e))
     );
+    syncSaveEmployee(updatedEmp).catch(console.error);
 
     // Synchronize employee name and sector in any existing requests
     setRequests((prev) =>
       prev.map((r) => {
         if (r.employeeId === updatedEmp.id) {
-          return {
+          const syncedReq = {
             ...r,
             employeeName: updatedEmp.name,
             sector: updatedEmp.sector,
           };
+          syncSaveRequest(syncedReq).catch(console.error);
+          return syncedReq;
         }
         return r;
       })
@@ -245,6 +291,7 @@ export default function App() {
 
     const emp = employees.find((e) => e.id === empId);
     setEmployees((prev) => prev.filter((e) => e.id !== empId));
+    syncDeleteEmployee(empId).catch(console.error);
 
     if (activeOperatorId === empId) {
       setActiveOperatorId(null);
@@ -260,11 +307,12 @@ export default function App() {
       return;
     }
 
+    let updatedReqToSync: VacationRequest | null = null;
     setRequests((prev) =>
       prev.map((r) => {
         if (r.id === requestId) {
           const newEndDate = calculateEndDate(newStartDate, r.days);
-          return {
+          const updatedReq = {
             ...r,
             startDate: newStartDate,
             endDate: newEndDate,
@@ -273,10 +321,16 @@ export default function App() {
               : `${r.resolutionNote} · [Inicio ajustado a ${formatDisplayDate(newStartDate)} por supervisión]`,
             supervisedBy: r.supervisedBy || 'Supervisor de Planta',
           };
+          updatedReqToSync = updatedReq;
+          return updatedReq;
         }
         return r;
       })
     );
+
+    if (updatedReqToSync) {
+      syncSaveRequest(updatedReqToSync).catch(console.error);
+    }
 
     setSelectedRequest((prev) => {
       if (!prev || prev.id !== requestId) return prev;
@@ -293,6 +347,7 @@ export default function App() {
   // Handlers
   const handleCreateRequest = (newReq: VacationRequest) => {
     setRequests((prev) => [newReq, ...prev]);
+    syncSaveRequest(newReq).catch(console.error);
     showToast(`Solicitud de ${newReq.employeeName} registrada (${formatExactDateTime(newReq.requestedAt)}). Aguarda revisión de supervisión.`);
   };
 
@@ -302,20 +357,28 @@ export default function App() {
       return;
     }
 
+    let updatedReqToSync: VacationRequest | null = null;
     setRequests((prev) =>
       prev.map((r) => {
         if (r.id === requestId) {
-          return {
+          const updatedReq = {
             ...r,
-            status: 'APROBADA',
+            status: 'APROBADA' as const,
             resolutionNote: `Aprobada por Supervisor de Planta: ${supervisorNote || 'Validada tras proceso de revisión previo'}`,
             supervisedBy: 'Jefe de Planta',
             supervisedAt: new Date().toISOString(),
           };
+          updatedReqToSync = updatedReq;
+          return updatedReq;
         }
         return r;
       })
     );
+
+    if (updatedReqToSync) {
+      syncSaveRequest(updatedReqToSync).catch(console.error);
+    }
+
     setSelectedRequest(null);
     showToast('Vacaciones aprobadas oficialmente por Supervisión.');
   };
@@ -326,26 +389,35 @@ export default function App() {
       return;
     }
 
+    let updatedReqToSync: VacationRequest | null = null;
     setRequests((prev) =>
       prev.map((r) => {
         if (r.id === requestId) {
-          return {
+          const updatedReq = {
             ...r,
-            status: 'RECHAZADA',
+            status: 'RECHAZADA' as const,
             resolutionNote: `Rechazada por Supervisor: ${supervisorNote || 'Conflicto de coincidencia de fechas'}`,
             supervisedBy: 'Jefe de Planta',
             supervisedAt: new Date().toISOString(),
           };
+          updatedReqToSync = updatedReq;
+          return updatedReq;
         }
         return r;
       })
     );
+
+    if (updatedReqToSync) {
+      syncSaveRequest(updatedReqToSync).catch(console.error);
+    }
+
     setSelectedRequest(null);
     showToast('Solicitud rechazada.');
   };
 
   const handleCancelRequest = (requestId: string) => {
     setRequests((prev) => prev.filter((r) => r.id !== requestId));
+    syncDeleteRequest(requestId).catch(console.error);
     setSelectedRequest(null);
     showToast('Solicitud eliminada de la planificación.');
   };
@@ -356,14 +428,15 @@ export default function App() {
       return;
     }
 
-    if (window.confirm('¿Restablecer datos originales de la planta y solicitudes predeterminadas?')) {
+    if (window.confirm('¿Restablecer datos originales de la planta y solicitudes predeterminadas en todos los dispositivos?')) {
       setEmployees(INITIAL_EMPLOYEES);
       setRequests(INITIAL_REQUESTS);
       setConfig(DEFAULT_PLANT_CONFIG);
       localStorage.removeItem(STORAGE_KEYS.EMPLOYEES);
       localStorage.removeItem(STORAGE_KEYS.REQUESTS);
       localStorage.removeItem(STORAGE_KEYS.CONFIG);
-      showToast('Datos de planta restablecidos.');
+      syncResetAllData().catch(console.error);
+      showToast('Datos de planta restablecidos y sincronizados.');
     }
   };
 
@@ -554,7 +627,8 @@ export default function App() {
             config={config}
             onUpdateConfig={(cfg) => {
               setConfig(cfg);
-              showToast('Reglas de planta actualizadas.');
+              syncUpdateConfig(cfg).catch(console.error);
+              showToast('Reglas de planta actualizadas y sincronizadas.');
             }}
             onResetData={handleResetData}
           />
