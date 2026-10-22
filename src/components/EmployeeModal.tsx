@@ -53,7 +53,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
   // Calculate live preview of balance
   const tempEmp: Employee = {
     id: employee ? employee.id : 'temp-id',
-    name: name || 'Operario',
+    name: name || 'Colaborador',
     sector,
     totalDays: totalDays || 0,
   };
@@ -66,7 +66,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     const trimmedName = name.trim().toUpperCase();
 
     if (!trimmedName) {
-      setError('Por favor ingrese el nombre y apellido del operario.');
+      setError('Por favor ingrese el nombre y apellido del colaborador.');
       return;
     }
 
@@ -77,7 +77,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
     if (isEditing && totalDays < currentApproved) {
       setError(
-        `El operario ya tiene ${currentApproved} días de vacaciones aprobados. Los días totales no pueden ser menores a los días ya tomados.`
+        `El colaborador ya tiene ${currentApproved} días de vacaciones aprobados. Los días totales no pueden ser menores a los días ya tomados.`
       );
       return;
     }
@@ -117,7 +117,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-white">
-                {isEditing ? 'Modificar Datos de Operario y Antigüedad' : 'Nuevo Ingreso a la Dotación'}
+                {isEditing ? 'Modificar Datos de Colaborador y Antigüedad' : 'Nuevo Ingreso a la Dotación'}
               </h2>
               <p className="text-[11px] text-slate-400">
                 {isEditing
@@ -168,11 +168,11 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <Briefcase className="w-3.5 h-3.5 text-slate-400" />
               <span>Sector de Planta</span>
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setSector('PROD')}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all text-left flex items-center justify-between ${
+                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all text-left flex items-center justify-between ${
                   sector === 'PROD'
                     ? 'bg-sky-600/20 border-sky-500 text-sky-200 shadow-sm'
                     : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
@@ -188,7 +188,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSector('CYD')}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all text-left flex items-center justify-between ${
+                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all text-left flex items-center justify-between ${
                   sector === 'CYD'
                     ? 'bg-emerald-600/20 border-emerald-500 text-emerald-200 shadow-sm'
                     : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
@@ -199,6 +199,38 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                   <div className="text-[10px] text-emerald-400">Sector CYD</div>
                 </div>
                 {sector === 'CYD' && <Check className="w-4 h-4 text-emerald-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSector('MANT')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all text-left flex items-center justify-between ${
+                  sector === 'MANT'
+                    ? 'bg-amber-600/20 border-amber-500 text-amber-200 shadow-sm'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="font-bold text-white">MANTENIMIENTO</div>
+                  <div className="text-[10px] text-amber-400">Sector MANT</div>
+                </div>
+                {sector === 'MANT' && <Check className="w-4 h-4 text-amber-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSector('CAL')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all text-left flex items-center justify-between ${
+                  sector === 'CAL'
+                    ? 'bg-purple-600/20 border-purple-500 text-purple-200 shadow-sm'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="font-bold text-white">CALIDAD</div>
+                  <div className="text-[10px] text-purple-400">Sector Cal</div>
+                </div>
+                {sector === 'CAL' && <Check className="w-4 h-4 text-purple-400" />}
               </button>
             </div>
           </div>

@@ -14,16 +14,21 @@ import {
   HardHat,
   ShieldCheck,
   X,
-  UserCheck
+  UserCheck,
+  ChevronDown
 } from 'lucide-react';
 import { Employee, PlantConfig, SectorType, VacationRequest, UserRole } from '../types';
 import { 
   formatLocalDate, 
   parseLocalDate, 
   formatDisplayDate, 
+  formatDayAndDate,
   getISOWeekNumber, 
   isStatusApproved, 
-  formatExactDateTime 
+  formatExactDateTime,
+  getSectorLabel,
+  getMaxQuotaForSector,
+  getSectorBadgeClass
 } from '../utils/vacationEngine';
 
 interface SharedCalendarProps {
@@ -127,14 +132,27 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
 
       const prodCount = activeInWeek.filter((r) => r.sector === 'PROD').length;
       const cydCount = activeInWeek.filter((r) => r.sector === 'CYD').length;
+      const mantCount = activeInWeek.filter((r) => r.sector === 'MANT').length;
+      const calCount = activeInWeek.filter((r) => r.sector === 'CAL').length;
+
+      const maxProd = config.maxSimultaneousProd ?? 1;
+      const maxCyd = config.maxSimultaneousCyd ?? 1;
+      const maxMant = config.maxSimultaneousMant ?? 1;
+      const maxCal = config.maxSimultaneousCal ?? 1;
 
       return {
         prodCount,
         cydCount,
-        prodOverlimit: prodCount > config.maxSimultaneousProd,
-        cydOverlimit: cydCount > config.maxSimultaneousCyd,
-        prodAtLimit: prodCount === config.maxSimultaneousProd,
-        cydAtLimit: cydCount === config.maxSimultaneousCyd,
+        mantCount,
+        calCount,
+        prodOverlimit: prodCount > maxProd,
+        cydOverlimit: cydCount > maxCyd,
+        mantOverlimit: mantCount > maxMant,
+        calOverlimit: calCount > maxCal,
+        prodAtLimit: prodCount === maxProd,
+        cydAtLimit: cydCount === maxCyd,
+        mantAtLimit: mantCount === maxMant,
+        calAtLimit: calCount === maxCal,
       };
     });
   }, [weeks, visibleRequests, config]);
@@ -182,7 +200,7 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
           )}
           <div>
             <div className="font-bold text-white flex items-center gap-2">
-              <span>{isSupervisor ? 'Modo Supervisor Activo' : 'Modo Operador Activo'}</span>
+              <span>{isSupervisor ? 'Modo Supervisor Activo' : 'Modo Colaborador Activo'}</span>
               <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-slate-900 border border-slate-700">
                 {isSupervisor ? 'Control total y resolución' : 'Visualización de vacaciones aprobadas'}
               </span>
@@ -205,38 +223,31 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
       {/* Top Controls & Filters */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Sector Filter Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-slate-800 rounded-lg border border-slate-700/60">
-            <button
-              onClick={() => setSelectedSector('ALL')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                selectedSector === 'ALL'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+          {/* Sector Filter Dropdown (replaces buttons) */}
+          <div className="relative flex items-center">
+            <Filter className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
+            <select
+              value={selectedSector}
+              onChange={(e) => setSelectedSector(e.target.value as 'ALL' | SectorType)}
+              className="pl-8 pr-8 py-1.5 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
             >
-              Todos los Sectores
-            </button>
-            <button
-              onClick={() => setSelectedSector('PROD')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                selectedSector === 'PROD'
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Producción (PROD)
-            </button>
-            <button
-              onClick={() => setSelectedSector('CYD')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                selectedSector === 'CYD'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Carga y Descarga (CYD)
-            </button>
+              <option value="ALL" className="bg-slate-900 text-slate-200">
+                Todos los Sectores ({employees.length})
+              </option>
+              <option value="PROD" className="bg-slate-900 text-sky-400">
+                Producción (PROD - {employees.filter((e) => e.sector === 'PROD').length})
+              </option>
+              <option value="CYD" className="bg-slate-900 text-emerald-400">
+                Carga y Descarga (CYD - {employees.filter((e) => e.sector === 'CYD').length})
+              </option>
+              <option value="MANT" className="bg-slate-900 text-amber-400">
+                Mantenimiento (MANT - {employees.filter((e) => e.sector === 'MANT').length})
+              </option>
+              <option value="CAL" className="bg-slate-900 text-purple-400">
+                Calidad (Cal - {employees.filter((e) => e.sector === 'CAL').length})
+              </option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-slate-400 pointer-events-none" />
           </div>
 
           {/* Search box */}
@@ -244,7 +255,7 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
-              placeholder="Buscar operario..."
+              placeholder="Buscar colaborador..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8 pr-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-44"
@@ -326,7 +337,7 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
               {/* Header row with Weeks */}
               <div className="grid grid-cols-[260px_repeat(8,minmax(110px,1fr))] border-b border-slate-800 bg-slate-850">
                 <div className="p-3 text-xs font-bold text-slate-300 border-r border-slate-800 flex items-center justify-between">
-                  <span>Operario y Sector</span>
+                  <span>Colaborador y Sector</span>
                   <span className="text-[10px] text-slate-500 font-normal">
                     {filteredEmployees.length} personal
                   </span>
@@ -363,57 +374,92 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
                 {weekStats.map((stat, idx) => (
                   <div
                     key={idx}
-                    className="p-2 border-r border-slate-800 flex flex-col items-center justify-center gap-0.5 font-mono text-[10px]"
+                    className="p-1 border-r border-slate-800 flex flex-col items-center justify-center font-mono text-[9px]"
                   >
-                    <div className="flex items-center gap-1">
-                      <span className="text-slate-500">P:</span>
-                      <span
-                        className={`font-semibold px-1 rounded ${
-                          stat.prodOverlimit
-                            ? 'bg-rose-500/30 text-rose-300 font-bold'
-                            : stat.prodAtLimit
-                            ? 'bg-amber-500/20 text-amber-300'
-                            : 'text-slate-300'
-                        }`}
-                        title={`PROD: ${stat.prodCount} ausentes de ${config.maxSimultaneousProd} permitidos`}
-                      >
-                        {stat.prodCount}/{config.maxSimultaneousProd}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-slate-500">C:</span>
-                      <span
-                        className={`font-semibold px-1 rounded ${
-                          stat.cydOverlimit
-                            ? 'bg-rose-500/30 text-rose-300 font-bold'
-                            : stat.cydAtLimit
-                            ? 'bg-amber-500/20 text-amber-300'
-                            : 'text-slate-300'
-                        }`}
-                        title={`CYD: ${stat.cydCount} ausentes de ${config.maxSimultaneousCyd} permitidos`}
-                      >
-                        {stat.cydCount}/{config.maxSimultaneousCyd}
-                      </span>
+                    <div className="grid grid-cols-2 gap-x-1.5 gap-y-0.5 text-center">
+                      <div className="flex items-center gap-0.5" title={`PROD: ${stat.prodCount} ausentes de ${config.maxSimultaneousProd ?? 1} permitidos`}>
+                        <span className="text-slate-500 font-bold">P:</span>
+                        <span
+                          className={`font-semibold px-0.5 rounded ${
+                            stat.prodOverlimit
+                              ? 'bg-rose-500/30 text-rose-300 font-bold'
+                              : stat.prodAtLimit
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : 'text-slate-300'
+                          }`}
+                        >
+                          {stat.prodCount}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-0.5" title={`CYD: ${stat.cydCount} ausentes de ${config.maxSimultaneousCyd ?? 1} permitidos`}>
+                        <span className="text-slate-500 font-bold">C:</span>
+                        <span
+                          className={`font-semibold px-0.5 rounded ${
+                            stat.cydOverlimit
+                              ? 'bg-rose-500/30 text-rose-300 font-bold'
+                              : stat.cydAtLimit
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : 'text-slate-300'
+                          }`}
+                        >
+                          {stat.cydCount}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-0.5" title={`MANT: ${stat.mantCount} ausentes de ${config.maxSimultaneousMant ?? 1} permitidos`}>
+                        <span className="text-slate-500 font-bold">M:</span>
+                        <span
+                          className={`font-semibold px-0.5 rounded ${
+                            stat.mantOverlimit
+                              ? 'bg-rose-500/30 text-rose-300 font-bold'
+                              : stat.mantAtLimit
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : 'text-slate-300'
+                          }`}
+                        >
+                          {stat.mantCount}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-0.5" title={`CAL: ${stat.calCount} ausentes de ${config.maxSimultaneousCal ?? 1} permitidos`}>
+                        <span className="text-slate-500 font-bold">Q:</span>
+                        <span
+                          className={`font-semibold px-0.5 rounded ${
+                            stat.calOverlimit
+                              ? 'bg-rose-500/30 text-rose-300 font-bold'
+                              : stat.calAtLimit
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : 'text-slate-300'
+                          }`}
+                        >
+                          {stat.calCount}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Rows grouped by Sector */}
-              {['PROD', 'CYD'].map((sec) => {
+              {(['PROD', 'CYD', 'MANT', 'CAL'] as SectorType[]).map((sec) => {
                 const sectorEmployees = filteredEmployees.filter((e) => e.sector === sec);
                 if (sectorEmployees.length === 0) return null;
+
+                const secLabel = getSectorLabel(sec);
+                const maxQuota = getMaxQuotaForSector(sec, config);
+                const dotColor = 
+                  sec === 'PROD' ? 'bg-sky-400' : 
+                  sec === 'CYD' ? 'bg-emerald-400' : 
+                  sec === 'MANT' ? 'bg-amber-400' : 'bg-purple-400';
 
                 return (
                   <React.Fragment key={sec}>
                     {/* Sector Header Separator */}
                     <div className="bg-slate-850/90 px-4 py-1.5 text-xs font-bold text-slate-300 border-b border-slate-800 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${sec === 'PROD' ? 'bg-sky-400' : 'bg-emerald-400'}`} />
-                        <span>SECTOR {sec === 'PROD' ? 'PRODUCCIÓN (PROD)' : 'CARGA Y DESCARGA (CYD)'}</span>
+                        <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
+                        <span>SECTOR {secLabel.toUpperCase()}</span>
                       </div>
                       <span className="text-[11px] text-slate-400 font-normal">
-                        {sectorEmployees.length} operarios · Cupo simultáneo: {sec === 'PROD' ? config.maxSimultaneousProd : config.maxSimultaneousCyd} (Sin coincidencias)
+                        {sectorEmployees.length} colaboradores · Cupo simultáneo: {maxQuota} (Sin coincidencias)
                       </span>
                     </div>
 
@@ -664,19 +710,19 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
 
             <div className="space-y-2.5 text-xs">
               <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                <span className="text-slate-400">Operario:</span>
+                <span className="text-slate-400">Colaborador:</span>
                 <span className="font-bold text-white">{operatorDetailModal.employeeName}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-800/60">
                 <span className="text-slate-400">Sector:</span>
                 <span className="font-mono text-slate-200">
-                  {operatorDetailModal.sector === 'PROD' ? 'Producción (PROD)' : 'Carga y Descarga (CYD)'}
+                  {getSectorLabel(operatorDetailModal.sector)}
                 </span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-800/60">
                 <span className="text-slate-400">Período:</span>
                 <span className="font-mono text-emerald-300 font-semibold">
-                  Lun {formatDisplayDate(operatorDetailModal.startDate)} al Dom {formatDisplayDate(operatorDetailModal.endDate)}
+                  {formatDayAndDate(operatorDetailModal.startDate)} al {formatDayAndDate(operatorDetailModal.endDate)}
                 </span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-800/60">

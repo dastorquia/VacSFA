@@ -12,10 +12,12 @@ import {
   UserPlus, 
   ShieldCheck, 
   AlertOctagon,
-  X
+  X,
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 import { Employee, SectorType, VacationRequest, UserRole } from '../types';
-import { getEmployeeBalance, formatDisplayDate } from '../utils/vacationEngine';
+import { getEmployeeBalance, formatDisplayDate, getSectorBadgeClass, getSectorLabel } from '../utils/vacationEngine';
 import { EmployeeModal } from './EmployeeModal';
 
 interface EmployeeTableProps {
@@ -59,6 +61,8 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
   const prodCount = employees.filter((e) => e.sector === 'PROD').length;
   const cydCount = employees.filter((e) => e.sector === 'CYD').length;
+  const mantCount = employees.filter((e) => e.sector === 'MANT').length;
+  const calCount = employees.filter((e) => e.sector === 'CAL').length;
 
   const handleOpenAddModal = () => {
     setEditingEmployee(null);
@@ -99,31 +103,31 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       {/* Top filters & Management Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 p-1 bg-slate-800 rounded-lg border border-slate-700/60 text-xs">
-            <button
-              onClick={() => setSectorFilter('ALL')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                sectorFilter === 'ALL' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
+          {/* Sector filter dropdown */}
+          <div className="relative flex items-center">
+            <Filter className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
+            <select
+              value={sectorFilter}
+              onChange={(e) => setSectorFilter(e.target.value as 'ALL' | SectorType)}
+              className="pl-8 pr-8 py-2 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
             >
-              Todos ({employees.length})
-            </button>
-            <button
-              onClick={() => setSectorFilter('PROD')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                sectorFilter === 'PROD' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              PROD ({prodCount})
-            </button>
-            <button
-              onClick={() => setSectorFilter('CYD')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                sectorFilter === 'CYD' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Carga y Descarga (CYD - {cydCount})
-            </button>
+              <option value="ALL" className="bg-slate-900 text-slate-200">
+                Todos los Sectores ({employees.length})
+              </option>
+              <option value="PROD" className="bg-slate-900 text-sky-400">
+                Producción (PROD - {prodCount})
+              </option>
+              <option value="CYD" className="bg-slate-900 text-emerald-400">
+                Carga y Descarga (CYD - {cydCount})
+              </option>
+              <option value="MANT" className="bg-slate-900 text-amber-400">
+                Mantenimiento (MANT - {mantCount})
+              </option>
+              <option value="CAL" className="bg-slate-900 text-purple-400">
+                Calidad (Cal - {calCount})
+              </option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-slate-400 pointer-events-none" />
           </div>
 
           {/* Supervisor-only: Add Employee Button */}
@@ -157,7 +161,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-850 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3 px-4">Operario</th>
+                <th className="py-3 px-4">Colaborador</th>
                 <th className="py-3 px-3">Sector</th>
                 <th className="py-3 px-3 text-right">Días Totales</th>
                 <th className="py-3 px-3 text-right">Aprobados</th>
@@ -171,7 +175,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
               {filteredEmployees.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500 text-xs">
-                    No se encontraron operarios registrados con el criterio de búsqueda.
+                    No se encontraron colaboradores registrados con el criterio de búsqueda.
                   </td>
                 </tr>
               ) : (
@@ -220,11 +224,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
                         <td className="py-3 px-3">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              emp.sector === 'PROD'
-                                ? 'bg-sky-500/20 text-sky-300'
-                                : 'bg-emerald-500/20 text-emerald-300'
-                            }`}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getSectorBadgeClass(emp.sector)}`}
                           >
                             {emp.sector}
                           </span>
@@ -282,7 +282,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                                 <button
                                   onClick={() => setEmployeeToDelete(emp)}
                                   className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
-                                  title="Dar de baja operario"
+                                  title="Dar de baja colaborador"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -407,7 +407,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   <AlertOctagon className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-white">Baja de Operario de Planta</h2>
+                  <h2 className="text-sm font-bold text-white">Baja de Colaborador de Planta</h2>
                   <p className="text-[11px] text-slate-400">Desvinculación de dotación activa</p>
                 </div>
               </div>
@@ -421,7 +421,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
             <div className="p-6 space-y-4">
               <p className="text-xs text-slate-300">
-                ¿Está seguro de que desea dar de baja al operario{' '}
+                ¿Está seguro de que desea dar de baja al colaborador{' '}
                 <strong className="text-white">{employeeToDelete.name}</strong> del sector{' '}
                 <strong className="text-white">{employeeToDelete.sector}</strong>?
               </p>

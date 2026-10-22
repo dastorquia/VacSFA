@@ -19,7 +19,9 @@ import {
   formatDisplayDate, 
   formatLocalDate,
   getEmployeeBalance,
-  evaluateVacationRequest 
+  evaluateVacationRequest,
+  getSectorBadgeClass,
+  getSectorLabel 
 } from '../utils/vacationEngine';
 
 interface RequestVacationModalProps {
@@ -149,7 +151,7 @@ export const RequestVacationModal: React.FC<RequestVacationModalProps> = ({
           {/* Step 1: Select Employee */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block">
-              1. Seleccionar Operario
+              1. Seleccionar Colaborador
             </label>
             <select
               value={selectedEmployeeId}
@@ -174,6 +176,24 @@ export const RequestVacationModal: React.FC<RequestVacationModalProps> = ({
                     </option>
                   ))}
               </optgroup>
+              <optgroup label="Sector MANTENIMIENTO (MANT)">
+                {employees
+                  .filter((e) => e.sector === 'MANT')
+                  .map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label="Sector CALIDAD (Cal)">
+                {employees
+                  .filter((e) => e.sector === 'CAL')
+                  .map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+              </optgroup>
             </select>
 
             {/* Employee balance card */}
@@ -181,13 +201,9 @@ export const RequestVacationModal: React.FC<RequestVacationModalProps> = ({
               <div className="bg-slate-800/60 border border-slate-700/60 rounded-lg p-3 text-xs flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      selectedEmployee.sector === 'PROD'
-                        ? 'bg-sky-500/20 text-sky-300'
-                        : 'bg-emerald-500/20 text-emerald-300'
-                    }`}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getSectorBadgeClass(selectedEmployee.sector)}`}
                   >
-                    Sector {selectedEmployee.sector}
+                    Sector {getSectorLabel(selectedEmployee.sector)}
                   </span>
                   <span className="text-slate-300 font-medium">{selectedEmployee.name}</span>
                 </div>
@@ -386,7 +402,7 @@ export const RequestVacationModal: React.FC<RequestVacationModalProps> = ({
                 {/* Priority notice */}
                 <div className="mt-2.5 p-2 bg-slate-900/90 rounded text-[11px] text-slate-300 border border-slate-800">
                   <span>
-                    🕒 La solicitud se sellará con <strong>fecha, hora, minutos y segundos de ingreso</strong> para que el supervisor defina la prioridad en caso de coincidencia con otro operario.
+                    🕒 La solicitud se sellará con <strong>fecha, hora, minutos y segundos de ingreso</strong> para que el supervisor defina la prioridad en caso de coincidencia con otro colaborador.
                   </span>
                 </div>
 
@@ -411,7 +427,7 @@ export const RequestVacationModal: React.FC<RequestVacationModalProps> = ({
                 {liveVerdict.conflictingEmployees && liveVerdict.conflictingEmployees.length > 0 && (
                   <div className="mt-3 p-2.5 bg-slate-900/80 rounded-lg text-xs text-slate-300 border border-amber-900/40">
                     <span className="font-semibold text-amber-300 block mb-1">
-                      Operario(s) con solicitud en el mismo período ({selectedEmployee?.sector}):
+                      Colaborador(es) con solicitud en el mismo período ({selectedEmployee?.sector}):
                     </span>
                     <ul className="list-disc list-inside space-y-0.5 text-slate-400">
                       {liveVerdict.conflictingEmployees.map((c, i) => (

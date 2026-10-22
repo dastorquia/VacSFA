@@ -44,12 +44,20 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
   const prodVacations = activeVacations.filter((r) => r.sector === 'PROD');
   const cydVacations = activeVacations.filter((r) => r.sector === 'CYD');
+  const mantVacations = activeVacations.filter((r) => r.sector === 'MANT');
+  const calVacations = activeVacations.filter((r) => r.sector === 'CAL');
 
   const prodActiveEmployees = employees.filter(
     (e) => e.sector === 'PROD' && !prodVacations.some((v) => v.employeeId === e.id)
   );
   const cydActiveEmployees = employees.filter(
     (e) => e.sector === 'CYD' && !cydVacations.some((v) => v.employeeId === e.id)
+  );
+  const mantActiveEmployees = employees.filter(
+    (e) => e.sector === 'MANT' && !mantVacations.some((v) => v.employeeId === e.id)
+  );
+  const calActiveEmployees = employees.filter(
+    (e) => e.sector === 'CAL' && !calVacations.some((v) => v.employeeId === e.id)
   );
 
   const handlePrint = () => {
@@ -141,31 +149,53 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
 
           {/* Summary KPIs */}
-          <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-            <div className="p-3 bg-slate-850 print:bg-gray-100 rounded border border-slate-700 print:border-gray-300">
-              <div className="font-bold text-slate-200 print:text-black mb-1">
-                SECTOR PRODUCCIÓN (PROD)
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
+            <div className="p-2.5 bg-slate-850 print:bg-gray-100 rounded border border-slate-700 print:border-gray-300">
+              <div className="font-bold text-sky-400 print:text-black mb-1">
+                PRODUCCIÓN (PROD)
               </div>
-              <div>Dotación Total: 10 operarios</div>
-              <div>De Vacaciones: {prodVacations.length} (Cupo máx: {config.maxSimultaneousProd} - sin coincidencia)</div>
-              <div className="font-bold text-emerald-400 print:text-green-700">
-                Operarios Activos en Turno: {prodActiveEmployees.length}
+              <div className="text-[11px] text-slate-300 print:text-gray-700">Total: {employees.filter((e) => e.sector === 'PROD').length} colab.</div>
+              <div className="text-[11px] text-slate-400">Vacaciones: {prodVacations.length}</div>
+              <div className="font-bold text-emerald-400 print:text-green-700 text-[11px] mt-0.5">
+                Activos: {prodActiveEmployees.length}
               </div>
             </div>
 
-            <div className="p-3 bg-slate-850 print:bg-gray-100 rounded border border-slate-700 print:border-gray-300">
-              <div className="font-bold text-slate-200 print:text-black mb-1">
-                SECTOR CARGA Y DESCARGA (CYD)
+            <div className="p-2.5 bg-slate-850 print:bg-gray-100 rounded border border-slate-700 print:border-gray-300">
+              <div className="font-bold text-emerald-400 print:text-black mb-1">
+                CARGA Y DESCARGA (CYD)
               </div>
-              <div>Dotación Total: 7 operarios</div>
-              <div>De Vacaciones: {cydVacations.length} (Cupo máx: {config.maxSimultaneousCyd} - sin coincidencia)</div>
-              <div className="font-bold text-emerald-400 print:text-green-700">
-                Operarios Activos en Turno: {cydActiveEmployees.length}
+              <div className="text-[11px] text-slate-300 print:text-gray-700">Total: {employees.filter((e) => e.sector === 'CYD').length} colab.</div>
+              <div className="text-[11px] text-slate-400">Vacaciones: {cydVacations.length}</div>
+              <div className="font-bold text-emerald-400 print:text-green-700 text-[11px] mt-0.5">
+                Activos: {cydActiveEmployees.length}
+              </div>
+            </div>
+
+            <div className="p-2.5 bg-slate-850 print:bg-gray-100 rounded border border-slate-700 print:border-gray-300">
+              <div className="font-bold text-amber-400 print:text-black mb-1">
+                MANTENIMIENTO (MANT)
+              </div>
+              <div className="text-[11px] text-slate-300 print:text-gray-700">Total: {employees.filter((e) => e.sector === 'MANT').length} colab.</div>
+              <div className="text-[11px] text-slate-400">Vacaciones: {mantVacations.length}</div>
+              <div className="font-bold text-emerald-400 print:text-green-700 text-[11px] mt-0.5">
+                Activos: {mantActiveEmployees.length}
+              </div>
+            </div>
+
+            <div className="p-2.5 bg-slate-850 print:bg-gray-100 rounded border border-slate-700 print:border-gray-300">
+              <div className="font-bold text-purple-400 print:text-black mb-1">
+                CALIDAD (Cal)
+              </div>
+              <div className="text-[11px] text-slate-300 print:text-gray-700">Total: {employees.filter((e) => e.sector === 'CAL').length} colab.</div>
+              <div className="text-[11px] text-slate-400">Vacaciones: {calVacations.length}</div>
+              <div className="font-bold text-emerald-400 print:text-green-700 text-[11px] mt-0.5">
+                Activos: {calActiveEmployees.length}
               </div>
             </div>
           </div>
 
-          {/* Section: Operarios en Vacaciones */}
+          {/* Section: Colaboradores en Vacaciones */}
           <div className="space-y-2">
             <h3 className="text-xs font-bold text-slate-300 print:text-black uppercase tracking-wider">
               1. Personal en Goce de Vacaciones (Semana {formatDisplayDate(selectedMonday)})
@@ -178,7 +208,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               <table className="w-full text-xs text-left border border-slate-800 print:border-gray-300">
                 <thead className="bg-slate-800 print:bg-gray-200 font-bold">
                   <tr>
-                    <th className="p-2">Operario</th>
+                    <th className="p-2">Colaborador</th>
                     <th className="p-2">Sector</th>
                     <th className="p-2">Período Completo</th>
                     <th className="p-2 text-right">Días</th>
@@ -195,11 +225,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       </td>
                       <td className="p-2 text-right">{v.days}d</td>
                       <td className="p-2 text-[11px]">
-                        {v.status === 'APROBADA_AUTO'
-                          ? 'Aprobada Automática'
-                          : v.status === 'PENDIENTE_CUPO'
-                          ? 'Pendiente de Revisión'
-                          : 'Aprobada Manual'}
+                        {v.status === 'APROBADA_AUTO' || v.status === 'APROBADA' || v.status === 'APROBADA_MANUAL'
+                          ? 'Aprobada Oficial'
+                          : 'Pendiente de Revisión'}
                       </td>
                     </tr>
                   ))}
@@ -211,16 +239,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           {/* Section: Personal Activo en Planta */}
           <div className="space-y-2 pt-2">
             <h3 className="text-xs font-bold text-slate-300 print:text-black uppercase tracking-wider">
-              2. Dotación Activa en Operación de Planta ({prodActiveEmployees.length + cydActiveEmployees.length} operarios)
+              2. Dotación Activa en Operación de Planta ({prodActiveEmployees.length + cydActiveEmployees.length + mantActiveEmployees.length + calActiveEmployees.length} colaboradores)
             </h3>
-            <div className="grid grid-cols-2 gap-4 text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
               <div>
-                <div className="font-semibold text-slate-400 print:text-gray-700 mb-1">
-                  PRODUCCIÓN ({prodActiveEmployees.length} presentes)
+                <div className="font-semibold text-sky-400 print:text-gray-700 mb-1">
+                  PRODUCCIÓN ({prodActiveEmployees.length})
                 </div>
                 <ul className="divide-y divide-slate-800 print:divide-gray-200 border border-slate-800 print:border-gray-300 rounded p-1 max-h-48 overflow-y-auto">
                   {prodActiveEmployees.map((e) => (
-                    <li key={e.id} className="py-1 px-2 font-medium">
+                    <li key={e.id} className="py-1 px-2 font-medium truncate">
                       {e.name}
                     </li>
                   ))}
@@ -228,12 +256,38 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
 
               <div>
-                <div className="font-semibold text-slate-400 print:text-gray-700 mb-1">
-                  CARGA Y DESCARGA ({cydActiveEmployees.length} presentes)
+                <div className="font-semibold text-emerald-400 print:text-gray-700 mb-1">
+                  CARGA Y DESCARGA ({cydActiveEmployees.length})
                 </div>
                 <ul className="divide-y divide-slate-800 print:divide-gray-200 border border-slate-800 print:border-gray-300 rounded p-1 max-h-48 overflow-y-auto">
                   {cydActiveEmployees.map((e) => (
-                    <li key={e.id} className="py-1 px-2 font-medium">
+                    <li key={e.id} className="py-1 px-2 font-medium truncate">
+                      {e.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <div className="font-semibold text-amber-400 print:text-gray-700 mb-1">
+                  MANTENIMIENTO ({mantActiveEmployees.length})
+                </div>
+                <ul className="divide-y divide-slate-800 print:divide-gray-200 border border-slate-800 print:border-gray-300 rounded p-1 max-h-48 overflow-y-auto">
+                  {mantActiveEmployees.map((e) => (
+                    <li key={e.id} className="py-1 px-2 font-medium truncate">
+                      {e.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <div className="font-semibold text-purple-400 print:text-gray-700 mb-1">
+                  CALIDAD ({calActiveEmployees.length})
+                </div>
+                <ul className="divide-y divide-slate-800 print:divide-gray-200 border border-slate-800 print:border-gray-300 rounded p-1 max-h-48 overflow-y-auto">
+                  {calActiveEmployees.map((e) => (
+                    <li key={e.id} className="py-1 px-2 font-medium truncate">
                       {e.name}
                     </li>
                   ))}

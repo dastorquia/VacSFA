@@ -30,20 +30,30 @@ import {
 import { 
   isStatusApproved, 
   isStatusPending, 
-  formatExactDateTime 
+  formatExactDateTime,
+  formatDisplayDate,
+  calculateEndDate
 } from './utils/vacationEngine';
 
 const STORAGE_KEYS = {
-  EMPLOYEES: 'vacsfa_employees_v1',
-  REQUESTS: 'vacsfa_requests_v1',
-  CONFIG: 'vacsfa_config_v1',
-  USER_ROLE: 'vacsfa_user_role_v1',
-  ACTIVE_OPERATOR: 'vacsfa_active_operator_v1',
+  EMPLOYEES: 'vacsfa_employees_v2',
+  REQUESTS: 'vacsfa_requests_v2',
+  CONFIG: 'vacsfa_config_v2',
+  USER_ROLE: 'vacsfa_user_role_v2',
+  ACTIVE_OPERATOR: 'vacsfa_active_colaborador_v2',
 };
 
-// Clean up any old PlantaVac keys from previous versions to ensure starting from scratch
+// Clean up any old keys to ensure sanitized anonymous names load immediately
 try {
-  ['plantavac_employees_v2', 'plantavac_requests_v2', 'plantavac_config_v2', 'plantavac_requests_v1'].forEach((k) => {
+  [
+    'vacsfa_employees_v1', 
+    'vacsfa_requests_v1', 
+    'vacsfa_active_operator_v1', 
+    'plantavac_employees_v2', 
+    'plantavac_requests_v2', 
+    'plantavac_config_v2', 
+    'plantavac_requests_v1'
+  ].forEach((k) => {
     localStorage.removeItem(k);
   });
 } catch {
@@ -51,11 +61,11 @@ try {
 }
 
 export default function App() {
-  // User Role: OPERADOR (default, can view approved schedule and request) vs SUPERVISOR (can review and approve)
+  // User Role: OPERADOR / COLABORADOR (default) vs SUPERVISOR (can review, adjust dates and approve)
   const [userRole, setUserRole] = useState<UserRole>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
-      return saved === 'SUPERVISOR' || saved === 'OPERADOR' ? saved : 'OPERADOR';
+      return saved === 'SUPERVISOR' || saved === 'OPERADOR' || saved === 'COLABORADOR' ? (saved as UserRole) : 'OPERADOR';
     } catch {
       return 'OPERADOR';
     }
@@ -72,11 +82,26 @@ export default function App() {
 
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
-  // State initialization with localStorage fallback
+  // State initialization with localStorage fallback and automatic sector upgrade
   const [employees, setEmployees] = useState<Employee[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
-      return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
+      if (saved) {
+        const parsed: Employee[] = JSON.parse(saved);
+        const hasMantOrCal = parsed.some((e) => e.sector === 'MANT' || e.sector === 'CAL');
+        if (!hasMantOrCal) {
+          const newSectorsEmployees = INITIAL_EMPLOYEES.filter(
+            (e) => e.sector === 'MANT' || e.sector === 'CAL'
+          );
+          const merged = [...parsed, ...newSectorsEmployees];
+          try {
+            localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        }
+        return parsed;
+      }
+      return INITIAL_EMPLOYEES;
     } catch {
       return INITIAL_EMPLOYEES;
     }
@@ -182,7 +207,7 @@ export default function App() {
     };
 
     setEmployees((prev) => [...prev, newEmp]);
-    showToast(`Operario ${newEmp.name} incorporado a la dotación (${newEmp.sector} · ${newEmp.totalDays}d anuales).`);
+    showToast(`Colaborador ${newEmp.name} incorporado a la dotación (${newEmp.sector} · ${newEmp.totalDays}d anuales).`);
   };
 
   const handleUpdateEmployee = (updatedEmp: Employee) => {
@@ -214,7 +239,7 @@ export default function App() {
 
   const handleDeleteEmployee = (empId: string) => {
     if (userRole !== 'SUPERVISOR') {
-      showToast('Acceso denegado: Se requiere rol de Supervisor para dar de baja operarios.');
+      showToast('Acceso denegado: Se requiere rol de Supervisor para dar de baja colaboradores.');
       return;
     }
 
@@ -225,7 +250,44 @@ export default function App() {
       setActiveOperatorId(null);
     }
 
-    showToast(`Operario ${emp?.name || empId} dado de baja de la dotación.`);
+    showToast(`Colaborador ${emp?.name || empId} dado de baja de la dotación.`);
+  };
+
+  // Supervisor start date editor handler (e.g. for Monday holidays)
+  const handleUpdateRequestDate = (requestId: string, newStartDate: string) => {
+    if (userRole !== 'SUPERVISOR') {
+      showToast('Acceso denegado: Se requiere rol de Supervisor para ajustar fechas.');
+      return;
+    }
+
+    setRequests((prev) =>
+      prev.map((r) => {
+        if (r.id === requestId) {
+          const newEndDate = calculateEndDate(newStartDate, r.days);
+          return {
+            ...r,
+            startDate: newStartDate,
+            endDate: newEndDate,
+            resolutionNote: r.resolutionNote.includes('Inicio ajustado')
+              ? r.resolutionNote
+              : `${r.resolutionNote} · [Inicio ajustado a ${formatDisplayDate(newStartDate)} por supervisión]`,
+            supervisedBy: r.supervisedBy || 'Supervisor de Planta',
+          };
+        }
+        return r;
+      })
+    );
+
+    setSelectedRequest((prev) => {
+      if (!prev || prev.id !== requestId) return prev;
+      return {
+        ...prev,
+        startDate: newStartDate,
+        endDate: calculateEndDate(newStartDate, prev.days),
+      };
+    });
+
+    showToast(`Fecha de inicio actualizada al ${formatDisplayDate(newStartDate)}.`);
   };
 
   // Handlers
@@ -359,7 +421,7 @@ export default function App() {
         onRequestSupervisorAccess={() => setIsPinModalOpen(true)}
         onSwitchToOperator={() => {
           setUserRole('OPERADOR');
-          showToast('Modo Operador activo: visualizando únicamente vacaciones aprobadas.');
+          showToast('Modo Colaborador activo: visualizando únicamente vacaciones aprobadas.');
         }}
         employees={employees}
         activeOperatorId={activeOperatorId}
@@ -369,7 +431,7 @@ export default function App() {
           if (emp) {
             showToast(`Operando como: ${emp.name} (${emp.sector})`);
           } else {
-            showToast('Vista de Operador General');
+            showToast('Vista de Colaborador General');
           }
         }}
       />
@@ -385,7 +447,7 @@ export default function App() {
               <div>
                 <div className="text-slate-400 text-[11px]">Plantel Total</div>
                 <div className="font-bold text-slate-200 font-mono">
-                  {employees.length} Operarios ({employees.filter((e) => e.sector === 'PROD').length} PROD · {employees.filter((e) => e.sector === 'CYD').length} CYD)
+                  {employees.length} Colaboradores ({employees.filter((e) => e.sector === 'PROD').length} PROD · {employees.filter((e) => e.sector === 'CYD').length} CYD · {employees.filter((e) => e.sector === 'MANT').length} MANT · {employees.filter((e) => e.sector === 'CAL').length} Cal)
                 </div>
               </div>
             </div>
@@ -465,6 +527,7 @@ export default function App() {
             onApproveException={handleApproveException}
             onRejectRequest={handleRejectRequest}
             onCancelRequest={handleCancelRequest}
+            onUpdateRequestDate={handleUpdateRequestDate}
             selectedRequest={selectedRequest}
             onSelectRequest={setSelectedRequest}
             userRole={userRole}
@@ -537,9 +600,16 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>VacSFA · Sistema de Gestión de Vacaciones y Dotación de Planta SFA</div>
           <div className="flex items-center gap-3">
-            <span>Sectores: PROD (Producción) & CYD (Carga y Descarga)</span>
+            <span>Sectores: PROD (Producción), CYD (Carga y Descarga), MANT (Mantenimiento) & Cal (Calidad)</span>
             <span aria-hidden="true">·</span>
-            <span>Inicio Lunes · Múltiplos de 7 · Sin Coincidencia en Mismo Sector</span>
+            <a
+              href="https://github.com/dastorquia"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-emerald-400 underline underline-offset-2 transition-colors font-mono"
+            >
+              github.com/dastorquia
+            </a>
           </div>
         </div>
       </footer>

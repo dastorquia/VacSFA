@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-sky-950/80 text-sky-300 border-sky-700/60'
                   }`}
                 >
-                  {isSupervisor ? '🛡️ Supervisor' : '👷 Operador'}
+                  {isSupervisor ? '🛡️ Supervisor' : '👷 Colaborador'}
                 </span>
               </span>
               <span className="text-[11px] text-slate-400 whitespace-nowrap font-medium hidden sm:inline">
@@ -139,11 +139,11 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Zone 3: Operator Selection & Role Switcher & Primary Action */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Operator Identifier (when in Operador mode) */}
+            {/* Colaborador Identifier (when in Colaborador mode) */}
             {!isSupervisor && (
               <div className="hidden xl:flex items-center gap-1.5 bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1 text-xs">
                 <UserCircle2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                <span className="text-slate-400 text-[11px]">Operario:</span>
+                <span className="text-slate-400 text-[11px]">Colaborador:</span>
                 <select
                   value={activeOperatorId || ''}
                   onChange={(e) => onSelectActiveOperator(e.target.value || null)}
@@ -170,6 +170,24 @@ export const Header: React.FC<HeaderProps> = ({
                         </option>
                       ))}
                   </optgroup>
+                  <optgroup label="Mantenimiento (MANT)" className="bg-slate-900 text-amber-400 font-bold">
+                    {employees
+                      .filter((e) => e.sector === 'MANT')
+                      .map((e) => (
+                        <option key={e.id} value={e.id} className="bg-slate-900 text-white font-normal">
+                          {e.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="Calidad (Cal)" className="bg-slate-900 text-purple-400 font-bold">
+                    {employees
+                      .filter((e) => e.sector === 'CAL')
+                      .map((e) => (
+                        <option key={e.id} value={e.id} className="bg-slate-900 text-white font-normal">
+                          {e.name}
+                        </option>
+                      ))}
+                  </optgroup>
                 </select>
               </div>
             )}
@@ -178,12 +196,12 @@ export const Header: React.FC<HeaderProps> = ({
             {isSupervisor ? (
               <button
                 onClick={onSwitchToOperator}
-                title="Cambiar al modo Operador de Planta (solo vista de aprobadas y creación de solicitudes)"
+                title="Cambiar al modo Colaborador de Planta (solo vista de aprobadas y creación de solicitudes)"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
               >
                 <HardHat className="w-3.5 h-3.5 text-sky-400" />
                 <span className="hidden sm:inline">Cambiar a</span>
-                <span>Operador</span>
+                <span>Colaborador</span>
               </button>
             ) : (
               <button

@@ -104,7 +104,7 @@ export const PlantRulesConfig: React.FC<PlantRulesConfigProps> = ({
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed">
-            Para respetar que dos personas del mismo sector no coincidan, el cupo máximo simultáneo por sector debe permanecer en <strong>1 operario</strong>. Si se programa una coincidencia, el motor automatizado la deriva a <strong>Revisión de Supervisor</strong>.
+            Para respetar que dos personas del mismo sector no coincidan, el cupo máximo simultáneo por sector debe permanecer en <strong>1 colaborador</strong>. Si se programa una coincidencia, el motor automatizado la deriva a <strong>Revisión de Supervisor</strong>.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -114,7 +114,7 @@ export const PlantRulesConfig: React.FC<PlantRulesConfigProps> = ({
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-300">
                     Sector PROD
                   </span>
-                  <div className="text-xs font-bold text-white mt-1">Producción (10 operarios)</div>
+                  <div className="text-xs font-bold text-white mt-1">Producción (10 colaboradores)</div>
                 </div>
                 <div className="text-right">
                   <span className="text-xl font-bold font-mono text-blue-400">
@@ -126,7 +126,7 @@ export const PlantRulesConfig: React.FC<PlantRulesConfigProps> = ({
 
               <div className="space-y-1">
                 <label className="text-[11px] text-slate-400 block">
-                  Máximo de operarios simultáneos en vacaciones:
+                  Máximo de colaboradores simultáneos en vacaciones:
                 </label>
                 <input
                   type="number"
@@ -140,7 +140,7 @@ export const PlantRulesConfig: React.FC<PlantRulesConfigProps> = ({
                 />
               </div>
               <p className="text-[11px] text-slate-500">
-                Al fijar 1 operario, el sistema impide automáticamente que coincidan dos compañeros de Producción.
+                Al fijar 1 colaborador, el sistema impide automáticamente que coincidan dos compañeros de Producción.
               </p>
             </div>
 
@@ -150,7 +150,7 @@ export const PlantRulesConfig: React.FC<PlantRulesConfigProps> = ({
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
                     Sector CYD
                   </span>
-                  <div className="text-xs font-bold text-white mt-1">Carga y Descarga (7 operarios)</div>
+                  <div className="text-xs font-bold text-white mt-1">Carga y Descarga (7 colaboradores)</div>
                 </div>
                 <div className="text-right">
                   <span className="text-xl font-bold font-mono text-emerald-400">
@@ -162,7 +162,7 @@ export const PlantRulesConfig: React.FC<PlantRulesConfigProps> = ({
 
               <div className="space-y-1">
                 <label className="text-[11px] text-slate-400 block">
-                  Máximo de operarios simultáneos en vacaciones:
+                  Máximo de colaboradores simultáneos en vacaciones:
                 </label>
                 <input
                   type="number"
@@ -176,7 +176,79 @@ export const PlantRulesConfig: React.FC<PlantRulesConfigProps> = ({
                 />
               </div>
               <p className="text-[11px] text-slate-500">
-                Al fijar 1 operario, se garantiza la continuidad de tareas en rampas y muelles de Carga y Descarga.
+                Al fijar 1 colaborador, se garantiza la continuidad de tareas en rampas y muelles de Carga y Descarga.
+              </p>
+            </div>
+
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300">
+                    Sector MANT
+                  </span>
+                  <div className="text-xs font-bold text-white mt-1">Mantenimiento (6 colaboradores)</div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-bold font-mono text-amber-400">
+                    {localConfig.maxSimultaneousMant ?? 1}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">simultáneo (sin coincidencia)</span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-400 block">
+                  Máximo de colaboradores simultáneos en vacaciones:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="3"
+                  value={localConfig.maxSimultaneousMant ?? 1}
+                  onChange={(e) =>
+                    setLocalConfig({ ...localConfig, maxSimultaneousMant: parseInt(e.target.value) || 1 })
+                  }
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white font-mono focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Al fijar 1 colaborador, se asegura la disponibilidad técnica de guardia en Mantenimiento.
+              </p>
+            </div>
+
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300">
+                    Sector Cal
+                  </span>
+                  <div className="text-xs font-bold text-white mt-1">Calidad (7 colaboradores)</div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-bold font-mono text-purple-400">
+                    {localConfig.maxSimultaneousCal ?? 1}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">simultáneo (sin coincidencia)</span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-400 block">
+                  Máximo de colaboradores simultáneos en vacaciones:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="3"
+                  value={localConfig.maxSimultaneousCal ?? 1}
+                  onChange={(e) =>
+                    setLocalConfig({ ...localConfig, maxSimultaneousCal: parseInt(e.target.value) || 1 })
+                  }
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white font-mono focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Al fijar 1 colaborador, se mantiene la cobertura continua de ensayos y liberación en Calidad.
               </p>
             </div>
           </div>

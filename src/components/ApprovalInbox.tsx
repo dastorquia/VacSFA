@@ -16,16 +16,29 @@ import {
   Flame,
   Info,
   Lock,
-  KeyRound
+  KeyRound,
+  ChevronDown
 } from 'lucide-react';
 import { VacationRequest, VacationStatus, SectorType, UserRole } from '../types';
-import { formatDisplayDate, formatExactDateTime, isStatusApproved, isStatusPending } from '../utils/vacationEngine';
+import { 
+  formatDisplayDate, 
+  formatExactDateTime, 
+  formatDayAndDate,
+  calculateEndDate,
+  parseLocalDate,
+  formatLocalDate,
+  isStatusApproved, 
+  isStatusPending,
+  getSectorLabel,
+  getSectorBadgeClass 
+} from '../utils/vacationEngine';
 
 interface ApprovalInboxProps {
   requests: VacationRequest[];
   onApproveException: (requestId: string, supervisorNote: string) => void;
   onRejectRequest: (requestId: string, supervisorNote: string) => void;
   onCancelRequest: (requestId: string) => void;
+  onUpdateRequestDate?: (requestId: string, newStartDate: string) => void;
   selectedRequest: VacationRequest | null;
   onSelectRequest: (req: VacationRequest | null) => void;
   userRole?: UserRole;
@@ -37,6 +50,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
   onApproveException,
   onRejectRequest,
   onCancelRequest,
+  onUpdateRequestDate,
   selectedRequest,
   onSelectRequest,
   userRole = 'SUPERVISOR',
@@ -46,6 +60,16 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
   const [sectorFilter, setSectorFilter] = useState<'ALL' | SectorType>('ALL');
   const [sortBy, setSortBy] = useState<'PRIORITY_FIFO' | 'NEWEST' | 'DATE_START'>('PRIORITY_FIFO');
   const [supervisorNote, setSupervisorNote] = useState<string>('');
+  const [editingStartDate, setEditingStartDate] = useState<string>('');
+  const [isEditingDateMode, setIsEditingDateMode] = useState<boolean>(false);
+
+  // Sync editing date when selected request changes
+  React.useEffect(() => {
+    if (selectedRequest) {
+      setEditingStartDate(selectedRequest.startDate);
+      setIsEditingDateMode(false);
+    }
+  }, [selectedRequest]);
 
   // Calculate submission order for pending requests in the same sector to display priority rank (#1, #2, etc.)
   const priorityMap = useMemo(() => {
@@ -57,7 +81,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
       (a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime()
     );
 
-    ['PROD', 'CYD'].forEach((sec) => {
+    (['PROD', 'CYD', 'MANT', 'CAL'] as SectorType[]).forEach((sec) => {
       const inSector = sortedPending.filter((r) => r.sector === sec);
       inSector.forEach((req, idx) => {
         map.set(req.id, { rank: idx + 1, totalInSector: inSector.length });
@@ -103,7 +127,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
   const totalPending = pendingRevisionCount + pendingConflictCount;
   const approvedCount = requests.filter((r) => isStatusApproved(r.status)).length;
 
-  if (userRole === 'OPERADOR') {
+  if (userRole === 'OPERADOR' || (userRole as string) === 'COLABORADOR') {
     return (
       <div className="max-w-2xl mx-auto py-12 px-4 text-center">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-5">
@@ -115,7 +139,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
               Bandeja de Aprobación Restringida a Supervisión
             </h2>
             <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
-              Has iniciado en modo <strong>Operador</strong>. Conforme al reglamento de planta, los operarios no pueden autoaprobar solicitudes de vacaciones. Solo los supervisores y jefes de planta están autorizados para revisar y aprobar pedidos.
+              Has iniciado en modo <strong>Colaborador</strong>. Conforme al reglamento de planta, los colaboradores no pueden autoaprobar solicitudes de vacaciones. Solo los supervisores y jefes de planta están autorizados para revisar, ajustar fechas y aprobar pedidos.
             </p>
           </div>
 
@@ -235,32 +259,31 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
             </button>
           </div>
 
-          {/* Sector filters */}
-          <div className="flex items-center gap-1 p-1 bg-slate-800 rounded-lg border border-slate-700/60 text-xs">
-            <button
-              onClick={() => setSectorFilter('ALL')}
-              className={`px-2.5 py-1 rounded font-medium ${
-                sectorFilter === 'ALL' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-              }`}
+          {/* Sector filter dropdown */}
+          <div className="relative flex items-center">
+            <Filter className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
+            <select
+              value={sectorFilter}
+              onChange={(e) => setSectorFilter(e.target.value as 'ALL' | SectorType)}
+              className="pl-8 pr-8 py-1.5 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
             >
-              Sectores
-            </button>
-            <button
-              onClick={() => setSectorFilter('PROD')}
-              className={`px-2.5 py-1 rounded font-medium ${
-                sectorFilter === 'PROD' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              PROD
-            </button>
-            <button
-              onClick={() => setSectorFilter('CYD')}
-              className={`px-2.5 py-1 rounded font-medium ${
-                sectorFilter === 'CYD' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              CYD (Carga y Descarga)
-            </button>
+              <option value="ALL" className="bg-slate-900 text-slate-200">
+                Todos los Sectores ({requests.length})
+              </option>
+              <option value="PROD" className="bg-slate-900 text-sky-400">
+                Producción (PROD - {requests.filter((r) => r.sector === 'PROD').length})
+              </option>
+              <option value="CYD" className="bg-slate-900 text-emerald-400">
+                Carga y Descarga (CYD - {requests.filter((r) => r.sector === 'CYD').length})
+              </option>
+              <option value="MANT" className="bg-slate-900 text-amber-400">
+                Mantenimiento (MANT - {requests.filter((r) => r.sector === 'MANT').length})
+              </option>
+              <option value="CAL" className="bg-slate-900 text-purple-400">
+                Calidad (Cal - {requests.filter((r) => r.sector === 'CAL').length})
+              </option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-slate-400 pointer-events-none" />
           </div>
         </div>
 
@@ -284,7 +307,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
       <div className="bg-slate-900 border border-blue-900/40 rounded-xl p-3.5 text-xs text-slate-300 flex items-start gap-2.5">
         <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <div className="leading-relaxed">
-          <strong>Criterio de Prioridad Temporal:</strong> En caso de que dos o más operarios del mismo sector soliciten fechas coincidentes en igualdad de méritos, el sistema registra el <strong>día, hora, minuto y segundo exactos</strong> de ingreso para otorgar prioridad a quien haya enviado la solicitud con anterioridad.
+          <strong>Criterio de Prioridad Temporal:</strong> En caso de que dos o más colaboradores del mismo sector soliciten fechas coincidentes en igualdad de méritos, el sistema registra el <strong>día, hora, minuto y segundo exactos</strong> de ingreso para otorgar prioridad a quien haya enviado la solicitud con anterioridad.
         </div>
       </div>
 
@@ -320,13 +343,9 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
                       {/* Name and Sector */}
                       <div className="flex flex-wrap items-center gap-2">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            req.sector === 'PROD'
-                              ? 'bg-sky-500/20 text-sky-300'
-                              : 'bg-emerald-500/20 text-emerald-300'
-                          }`}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getSectorBadgeClass(req.sector)}`}
                         >
-                          {req.sector === 'CYD' ? 'CYD · Carga y Descarga' : 'PROD · Producción'}
+                          {getSectorLabel(req.sector)}
                         </span>
 
                         <h3 className="text-sm font-bold text-white tracking-tight">
@@ -356,8 +375,8 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
                         </span>
                         <span aria-hidden="true" className="text-slate-600">·</span>
                         <span>
-                          Del <strong className="text-slate-200">Lun {formatDisplayDate(req.startDate)}</strong> al{' '}
-                          <strong className="text-slate-200">Dom {formatDisplayDate(req.endDate)}</strong>
+                          Del <strong className="text-slate-200">{formatDayAndDate(req.startDate)}</strong> al{' '}
+                          <strong className="text-slate-200">{formatDayAndDate(req.endDate)}</strong>
                         </span>
                       </div>
 
@@ -423,7 +442,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
                     <div className="mt-3 p-3 bg-amber-950/40 rounded-lg border border-amber-900/60 text-xs text-amber-200 space-y-1">
                       <div className="font-bold flex items-center gap-1.5 text-amber-300">
                         <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                        <span>Solapamiento con operario del mismo sector:</span>
+                        <span>Solapamiento con colaborador del mismo sector:</span>
                       </div>
                       {req.automatedLog.conflictingEmployees.map((conf, idx) => (
                         <div key={idx} className="pl-5 text-slate-300 flex flex-wrap items-center justify-between gap-1">
@@ -472,11 +491,109 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
                   <h4 className="text-base font-bold text-white">{selectedRequest.employeeName}</h4>
                   <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                     <span>
-                      Sector {selectedRequest.sector === 'CYD' ? 'Carga y Descarga (CYD)' : 'Producción (PROD)'}
+                      Sector {getSectorLabel(selectedRequest.sector)}
                     </span>
                     <span aria-hidden="true">·</span>
                     <span className="font-mono">{selectedRequest.days} días totales</span>
                   </div>
+                </div>
+
+                {/* VACATION PERIOD & SUPERVISOR DATE ADJUSTMENT */}
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Período y Fecha de Inicio</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDateMode(!isEditingDateMode)}
+                      className="text-[11px] font-semibold text-sky-400 hover:text-sky-300 underline cursor-pointer"
+                    >
+                      {isEditingDateMode ? 'Cerrar ajuste' : 'Ajustar fecha de inicio'}
+                    </button>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="text-[10px] text-slate-400">Período asignado:</div>
+                      <div className="font-bold text-slate-100 font-mono mt-0.5">
+                        {formatDayAndDate(selectedRequest.startDate)} al {formatDayAndDate(selectedRequest.endDate)}
+                      </div>
+                    </div>
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-bold">
+                      {selectedRequest.days} días
+                    </span>
+                  </div>
+
+                  {isEditingDateMode && (
+                    <div className="p-3 bg-slate-900/90 rounded-lg border border-sky-500/30 space-y-2.5 animate-fadeIn">
+                      <div className="text-[11px] text-slate-300 leading-snug">
+                        <strong>Ajuste por Feriado de Lunes:</strong> Si el lunes inicial es feriado, puedes ajustar el inicio a <strong>martes</strong> (u otro día). La finalización se recalcula automáticamente manteniendo los {selectedRequest.days} días.
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-slate-400 uppercase block">
+                          Nueva Fecha de Inicio:
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="date"
+                            value={editingStartDate}
+                            onChange={(e) => setEditingStartDate(e.target.value)}
+                            className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 focus:border-sky-500 rounded-lg text-white font-mono text-xs focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = parseLocalDate(selectedRequest.startDate);
+                              base.setDate(base.getDate() + 1);
+                              setEditingStartDate(formatLocalDate(base));
+                            }}
+                            className="px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                            title="Ajustar +1 día (iniciar en Martes si el Lunes es feriado)"
+                          >
+                            +1d (Martes)
+                          </button>
+                        </div>
+                      </div>
+
+                      {editingStartDate && editingStartDate !== selectedRequest.startDate && (
+                        <div className="p-2 rounded bg-sky-950/40 border border-sky-800/40 text-[11px] text-sky-200">
+                          <span className="text-slate-400 block text-[10px]">Nuevo período proyectado:</span>
+                          <strong>{formatDayAndDate(editingStartDate)}</strong> al{' '}
+                          <strong>{formatDayAndDate(calculateEndDate(editingStartDate, selectedRequest.days))}</strong>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingStartDate(selectedRequest.startDate);
+                            setIsEditingDateMode(false);
+                          }}
+                          className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                        >
+                          Descartar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!editingStartDate || editingStartDate === selectedRequest.startDate}
+                          onClick={() => {
+                            if (onUpdateRequestDate && editingStartDate) {
+                              onUpdateRequestDate(selectedRequest.id, editingStartDate);
+                              setIsEditingDateMode(false);
+                            }
+                          }}
+                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold text-xs rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Guardar Fecha</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* EXACT TIMESTAMP CALLOUT */}

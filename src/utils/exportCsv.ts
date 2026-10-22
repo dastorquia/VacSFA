@@ -8,8 +8,8 @@ export function exportPlantVacationsCsv(
   // Build CSV content
   const headers = [
     'Sector',
-    'ID Operario',
-    'Nombre Operario',
+    'ID Colaborador',
+    'Nombre Colaborador',
     'Días Totales',
     'Días Aprobados',
     'Días en Revisión',

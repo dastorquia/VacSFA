@@ -1,5 +1,5 @@
-export type SectorType = 'PROD' | 'CYD';
-export type UserRole = 'OPERADOR' | 'SUPERVISOR';
+export type SectorType = 'PROD' | 'CYD' | 'MANT' | 'CAL';
+export type UserRole = 'OPERADOR' | 'COLABORADOR' | 'SUPERVISOR';
 
 export interface Employee {
   id: string;
@@ -10,7 +10,7 @@ export interface Employee {
 
 export type VacationStatus = 
   | 'PENDIENTE_REVISION'   // Ingresada, auditada por el motor, aguarda decisión de supervisor
-  | 'PENDIENTE_CONFLICTO'  // Coincide con otro operario del mismo sector, aguarda decisión
+  | 'PENDIENTE_CONFLICTO'  // Coincide con otro colaborador del mismo sector, aguarda decisión
   | 'APROBADA'             // Aprobada por el Supervisor / Jefe de Planta
   | 'RECHAZADA'            // Rechazada por el Supervisor
   | 'APROBADA_AUTO'        // Compatibilidad histórica (tratada como aprobada)
@@ -62,8 +62,10 @@ export interface VacationRequest {
 }
 
 export interface PlantConfig {
-  maxSimultaneousProd: number; // Máximo operarios simultáneos (default: 1)
-  maxSimultaneousCyd: number;  // Máximo operarios simultáneos (default: 1)
+  maxSimultaneousProd: number; // Máximo colaboradores simultáneos (default: 1)
+  maxSimultaneousCyd: number;  // Máximo colaboradores simultáneos (default: 1)
+  maxSimultaneousMant?: number; // Máximo colaboradores simultáneos (default: 1)
+  maxSimultaneousCal?: number;  // Máximo colaboradores simultáneos (default: 1)
   allowAutoApproval: boolean;  // false por defecto: siempre requiere revisión previa
   plantName: string;
 }

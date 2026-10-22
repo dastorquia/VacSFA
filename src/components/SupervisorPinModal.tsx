@@ -57,7 +57,7 @@ export const SupervisorPinModal: React.FC<SupervisorPinModalProps> = ({
             <div>
               <p className="font-semibold text-white">Separación de Roles Operativos</p>
               <p className="text-slate-300 text-[11px] mt-0.5">
-                Para garantizar que los operarios no puedan autoaprobar sus solicitudes, el módulo de revisión, resolución y administración de dotación requiere credencial de supervisor.
+                Para garantizar que los colaboradores no puedan autoaprobar sus solicitudes, el módulo de revisión, resolución y administración de dotación requiere credencial de supervisor.
               </p>
             </div>
           </div>

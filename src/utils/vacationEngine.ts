@@ -37,6 +37,24 @@ export function formatDisplayDate(dateStr: string): string {
 }
 
 /**
+ * Gets Spanish day name abbreviation (e.g. Lun, Mar, Mié, etc.)
+ */
+export function getDayName(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = parseLocalDate(dateStr);
+  const names = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  return names[d.getDay()];
+}
+
+/**
+ * Formats a Date string into 'Lun 12/10/2026'
+ */
+export function formatDayAndDate(dateStr: string): string {
+  if (!dateStr) return '';
+  return `${getDayName(dateStr)} ${formatDisplayDate(dateStr)}`;
+}
+
+/**
  * Formats an ISO timestamp into a full readable date and time string.
  * Example: "Lun 21/10/2026, 09:30:15 hs"
  */
@@ -237,6 +255,68 @@ export function checkSectorConcurrency(
  * - PENDIENTE_CONFLICTO: Overlaps in same sector, awaiting supervisor resolution
  * - RECHAZADA_AUTO: Hard rules broken
  */
+export function getMaxQuotaForSector(sector: SectorType, config: PlantConfig): number {
+  switch (sector) {
+    case 'PROD':
+      return config.maxSimultaneousProd ?? 1;
+    case 'CYD':
+      return config.maxSimultaneousCyd ?? 1;
+    case 'MANT':
+      return config.maxSimultaneousMant ?? 1;
+    case 'CAL':
+      return config.maxSimultaneousCal ?? 1;
+    default:
+      return 1;
+  }
+}
+
+export function getSectorLabel(sector: SectorType): string {
+  switch (sector) {
+    case 'PROD':
+      return 'Producción (PROD)';
+    case 'CYD':
+      return 'Carga y Descarga (CYD)';
+    case 'MANT':
+      return 'Mantenimiento (MANT)';
+    case 'CAL':
+      return 'Calidad (Cal)';
+    default:
+      return sector;
+  }
+}
+
+export function getSectorShortLabel(sector: SectorType): string {
+  switch (sector) {
+    case 'PROD':
+      return 'PROD';
+    case 'CYD':
+      return 'CYD';
+    case 'MANT':
+      return 'MANT';
+    case 'CAL':
+      return 'Cal';
+    default:
+      return sector;
+  }
+}
+
+export function getSectorBadgeClass(sector: SectorType): string {
+  switch (sector) {
+    case 'PROD':
+      return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
+    case 'CYD':
+      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+    case 'MANT':
+      return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+    case 'CAL':
+      return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+    default:
+      return 'bg-slate-700 text-slate-300 border-slate-600';
+  }
+}
+
+export const ALL_SECTORS: SectorType[] = ['PROD', 'CYD', 'MANT', 'CAL'];
+
 export function evaluateVacationRequest(
   employee: Employee,
   startDateStr: string,
@@ -285,7 +365,7 @@ export function evaluateVacationRequest(
   });
 
   // Check 4: Sector quota & non-overlapping rule
-  const maxQuota = employee.sector === 'PROD' ? config.maxSimultaneousProd : config.maxSimultaneousCyd;
+  const maxQuota = getMaxQuotaForSector(employee.sector, config);
   const { maxActive, conflicting } = checkSectorConcurrency(
     employee.sector,
     startDateStr,
@@ -323,7 +403,7 @@ export function evaluateVacationRequest(
     return {
       status: 'PENDIENTE_CONFLICTO',
       canApprove: false,
-      summary: `Requiere revisión y definición de prioridad: Coincide con otro operario de ${employee.sector}. El supervisor deberá definir cuál aprobar según orden de ingreso (día y hora).`,
+      summary: `Requiere revisión y definición de prioridad: Coincide con otro colaborador de ${employee.sector}. El supervisor deberá definir cuál aprobar según orden de ingreso (día y hora).`,
       checks,
       conflictingEmployees: conflicting,
     };
