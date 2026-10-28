@@ -13,6 +13,7 @@ import { PlantRulesConfig } from './components/PlantRulesConfig';
 import { RequestVacationModal } from './components/RequestVacationModal';
 import { PrintReportModal } from './components/PrintReportModal';
 import { SupervisorPinModal } from './components/SupervisorPinModal';
+import { DataBackupModal } from './components/DataBackupModal';
 import { exportPlantVacationsCsv } from './utils/exportCsv';
 import { 
   Calendar, 
@@ -44,7 +45,8 @@ import {
   syncSaveRequest,
   syncDeleteRequest,
   syncUpdateConfig,
-  syncResetAllData
+  syncResetAllData,
+  syncBulkReplaceEmployees
 } from './services/firestoreSync';
 
 const STORAGE_KEYS = {
@@ -143,6 +145,7 @@ export default function App() {
   const [preselectedEmp, setPreselectedEmp] = useState<Employee | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Real-time synchronization across devices (Mobile <-> Web)
@@ -440,6 +443,33 @@ export default function App() {
     }
   };
 
+  const handleImportBackup = async (importedEmployees: Employee[], importedRequests?: VacationRequest[]) => {
+    setEmployees(importedEmployees);
+    if (importedRequests && importedRequests.length > 0) {
+      setRequests(importedRequests);
+    }
+    try {
+      localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(importedEmployees));
+      if (importedRequests && importedRequests.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.REQUESTS, JSON.stringify(importedRequests));
+      }
+    } catch {}
+    await syncBulkReplaceEmployees(importedEmployees, importedRequests);
+    showToast(`Dotación actualizada y sincronizada en Firestore (${importedEmployees.length} colaboradores).`);
+  };
+
+  const handleResetToGeneric = () => {
+    setEmployees(INITIAL_EMPLOYEES);
+    setRequests(INITIAL_REQUESTS);
+    setConfig(DEFAULT_PLANT_CONFIG);
+    try {
+      localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(INITIAL_EMPLOYEES));
+      localStorage.setItem(STORAGE_KEYS.REQUESTS, JSON.stringify(INITIAL_REQUESTS));
+    } catch {}
+    syncResetAllData().catch(console.error);
+    showToast('Dotación restablecida a la plantilla genérica pública de GitHub.');
+  };
+
   const handleOpenNewRequest = () => {
     if (activeOperatorId) {
       const current = employees.find((e) => e.id === activeOperatorId) || null;
@@ -472,7 +502,7 @@ export default function App() {
   const totalDaysRemaining = totalDaysEntitled - totalDaysScheduled;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans w-full overflow-x-hidden">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-blue-500/50 shadow-2xl rounded-xl p-4 text-xs text-white flex items-center gap-2.5 max-w-md animate-slideUp">
@@ -507,64 +537,74 @@ export default function App() {
             showToast('Vista de Colaborador General');
           }
         }}
+        onOpenBackup={() => setIsBackupModalOpen(true)}
       />
 
       {/* KPI & Plant Status Bar */}
       <section className="border-b border-slate-800 bg-slate-900/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300">
-                <Users className="w-4 h-4" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 text-xs">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 bg-slate-900/50 sm:bg-transparent p-2 sm:p-0 rounded-lg border border-slate-800/60 sm:border-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 shrink-0 mt-0.5 sm:mt-0">
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div>
-                <div className="text-slate-400 text-[11px]">Plantel Total</div>
-                <div className="font-bold text-slate-200 font-mono">
-                  {employees.length} Colaboradores ({employees.filter((e) => e.sector === 'PROD').length} PROD · {employees.filter((e) => e.sector === 'CYD').length} CYD · {employees.filter((e) => e.sector === 'MANT').length} MANT · {employees.filter((e) => e.sector === 'CAL').length} Cal)
+              <div className="min-w-0">
+                <div className="text-slate-400 text-[10px] sm:text-[11px]">Plantel Total</div>
+                <div className="font-bold text-slate-200 font-mono text-xs sm:text-sm">
+                  {employees.length} Colaboradores
+                </div>
+                <div className="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate">
+                  {employees.filter((e) => e.sector === 'PROD').length} PROD · {employees.filter((e) => e.sector === 'CYD').length} CYD · {employees.filter((e) => e.sector === 'MANT').length} MANT · {employees.filter((e) => e.sector === 'CAL').length} Cal
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4" />
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 bg-slate-900/50 sm:bg-transparent p-2 sm:p-0 rounded-lg border border-slate-800/60 sm:border-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div>
-                <div className="text-slate-400 text-[11px]">Días Aprobados</div>
-                <div className="font-bold text-emerald-300 font-mono">
-                  {totalDaysScheduled} / {totalDaysEntitled} días ({Math.round((totalDaysScheduled / totalDaysEntitled) * 100)}%)
+              <div className="min-w-0">
+                <div className="text-slate-400 text-[10px] sm:text-[11px]">Días Aprobados</div>
+                <div className="font-bold text-emerald-300 font-mono text-xs sm:text-sm">
+                  {totalDaysScheduled} / {totalDaysEntitled} d
+                </div>
+                <div className="text-[9px] sm:text-[10px] text-emerald-400/80 font-mono">
+                  {Math.round((totalDaysScheduled / totalDaysEntitled) * 100)}% asignado
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-950/60 text-blue-400 border border-blue-800/40 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4" />
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 bg-slate-900/50 sm:bg-transparent p-2 sm:p-0 rounded-lg border border-slate-800/60 sm:border-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-950/60 text-blue-400 border border-blue-800/40 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div>
-                <div className="text-slate-400 text-[11px]">Días por Planificar</div>
-                <div className="font-bold text-blue-300 font-mono">
-                  {totalDaysRemaining} días restantes
+              <div className="min-w-0">
+                <div className="text-slate-400 text-[10px] sm:text-[11px]">Días por Planificar</div>
+                <div className="font-bold text-blue-300 font-mono text-xs sm:text-sm">
+                  {totalDaysRemaining} días
+                </div>
+                <div className="text-[9px] sm:text-[10px] text-slate-400 font-mono">
+                  Disponibles en dotación
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 bg-slate-900/50 sm:bg-transparent p-2 sm:p-0 rounded-lg border border-slate-800/60 sm:border-0">
               <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 ${
                   pendingCount > 0
                     ? 'bg-amber-950 text-amber-400 border border-amber-800/50'
                     : 'bg-slate-800 text-slate-400'
                 }`}
               >
-                <AlertTriangle className="w-4 h-4" />
+                <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div>
-                <div className="text-slate-400 text-[11px]">
-                  {userRole === 'SUPERVISOR' ? 'Supervisión Pendiente' : 'Revisión por Supervisor'}
+              <div className="min-w-0">
+                <div className="text-slate-400 text-[10px] sm:text-[11px]">
+                  {userRole === 'SUPERVISOR' ? 'Supervisión' : 'En Revisión'}
                 </div>
                 <div
-                  className={`font-bold font-mono ${
+                  className={`font-bold font-mono text-xs sm:text-sm ${
                     pendingCount > 0 ? 'text-amber-300' : 'text-slate-400'
                   }`}
                 >
@@ -574,6 +614,9 @@ export default function App() {
                     ? `${pendingCount} en bandeja`
                     : `${pendingCount} en proceso`}
                 </div>
+                <div className="text-[9px] sm:text-[10px] text-slate-400 font-mono">
+                  {pendingCount > 0 ? 'Requiere resolución' : 'Sin pendientes'}
+                </div>
               </div>
             </div>
           </div>
@@ -581,7 +624,7 @@ export default function App() {
       </section>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 w-full">
         {activeTab === 'calendar' && (
           <SharedCalendar
             employees={employees}
@@ -619,6 +662,7 @@ export default function App() {
             onAddEmployee={handleAddEmployee}
             onUpdateEmployee={handleUpdateEmployee}
             onDeleteEmployee={handleDeleteEmployee}
+            onOpenBackupModal={() => setIsBackupModalOpen(true)}
           />
         )}
 
@@ -667,6 +711,17 @@ export default function App() {
         employees={employees}
         requests={requests}
         config={config}
+      />
+
+      {/* Data Backup & Privacy Modal */}
+      <DataBackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+        employees={employees}
+        requests={requests}
+        config={config}
+        onImportBackup={handleImportBackup}
+        onResetToGeneric={handleResetToGeneric}
       />
 
       {/* Footer */}

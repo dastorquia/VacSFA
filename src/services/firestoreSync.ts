@@ -162,3 +162,30 @@ export async function syncResetAllData(): Promise<void> {
   // Reset config
   await setDoc(doc(db, 'plant_config', CONFIG_DOC), DEFAULT_PLANT_CONFIG);
 }
+
+/**
+ * Bulk replaces employees in Firestore with an imported private backup roster.
+ */
+export async function syncBulkReplaceEmployees(newEmployees: Employee[], newRequests?: VacationRequest[]): Promise<void> {
+  const empSnap = await getDocs(collection(db, EMPLOYEES_COLLECTION));
+  const batch = writeBatch(db);
+
+  // Delete current employees in Firestore
+  empSnap.forEach((d) => batch.delete(d.ref));
+
+  // Insert the new imported employees
+  for (const emp of newEmployees) {
+    batch.set(doc(db, EMPLOYEES_COLLECTION, emp.id), emp);
+  }
+
+  // If requests are included, optionally replace them
+  if (newRequests && newRequests.length > 0) {
+    const reqSnap = await getDocs(collection(db, REQUESTS_COLLECTION));
+    reqSnap.forEach((d) => batch.delete(d.ref));
+    for (const req of newRequests) {
+      batch.set(doc(db, REQUESTS_COLLECTION, req.id), req);
+    }
+  }
+
+  await batch.commit();
+}

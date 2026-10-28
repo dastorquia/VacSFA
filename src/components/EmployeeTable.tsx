@@ -30,6 +30,7 @@ interface EmployeeTableProps {
   onAddEmployee?: (data: { name: string; sector: SectorType; totalDays: number }) => void;
   onUpdateEmployee?: (emp: Employee) => void;
   onDeleteEmployee?: (empId: string) => void;
+  onOpenBackupModal?: () => void;
 }
 
 export const EmployeeTable: React.FC<EmployeeTableProps> = ({
@@ -42,6 +43,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   onAddEmployee,
   onUpdateEmployee,
   onDeleteEmployee,
+  onOpenBackupModal,
 }) => {
   const isSupervisor = userRole === 'SUPERVISOR';
   const [sectorFilter, setSectorFilter] = useState<'ALL' | SectorType>('ALL');
@@ -102,14 +104,14 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
     <div className="space-y-4">
       {/* Top filters & Management Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
           {/* Sector filter dropdown */}
-          <div className="relative flex items-center">
+          <div className="relative flex items-center w-full sm:w-auto">
             <Filter className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
             <select
               value={sectorFilter}
               onChange={(e) => setSectorFilter(e.target.value as 'ALL' | SectorType)}
-              className="pl-8 pr-8 py-2 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
+              className="w-full sm:w-auto pl-8 pr-8 py-2 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
             >
               <option value="ALL" className="bg-slate-900 text-slate-200">
                 Todos los Sectores ({employees.length})
@@ -130,16 +132,29 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-slate-400 pointer-events-none" />
           </div>
 
-          {/* Supervisor-only: Add Employee Button */}
+          {/* Supervisor-only: Add Employee & Backup Buttons */}
           {isSupervisor && (
-            <button
-              onClick={handleOpenAddModal}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-sm transition-all shadow-indigo-900/30 cursor-pointer active:scale-95"
-              title="Registrar nuevo ingreso en la dotación de la planta"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Nuevo Ingreso</span>
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={handleOpenAddModal}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-sm transition-all shadow-indigo-900/30 cursor-pointer active:scale-95"
+                title="Registrar nuevo ingreso en la dotación de la planta"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Nuevo Ingreso</span>
+              </button>
+
+              {onOpenBackupModal && (
+                <button
+                  onClick={onOpenBackupModal}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-200 hover:text-white text-xs font-bold rounded-lg shadow-sm transition-all cursor-pointer active:scale-95"
+                  title="Administrar respaldo privado de nombres reales y privacidad de GitHub"
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Respaldo y Privacidad</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
 

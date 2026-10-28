@@ -211,10 +211,10 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <div className="flex flex-wrap items-center gap-2">
           {/* Status filters */}
-          <div className="flex items-center gap-1 p-1 bg-slate-800 rounded-lg border border-slate-700/60 text-xs">
+          <div className="flex items-center gap-1 p-1 bg-slate-800 rounded-lg border border-slate-700/60 text-xs overflow-x-auto max-w-full">
             <button
               onClick={() => setStatusFilter('ALL')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap shrink-0 ${
                 statusFilter === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -223,7 +223,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
 
             <button
               onClick={() => setStatusFilter('PENDING')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                 statusFilter === 'PENDING' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -237,7 +237,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
 
             <button
               onClick={() => setStatusFilter('CONFLICT')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                 statusFilter === 'CONFLICT' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -251,7 +251,7 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
 
             <button
               onClick={() => setStatusFilter('APPROVED')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap shrink-0 ${
                 statusFilter === 'APPROVED' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -260,12 +260,12 @@ export const ApprovalInbox: React.FC<ApprovalInboxProps> = ({
           </div>
 
           {/* Sector filter dropdown */}
-          <div className="relative flex items-center">
+          <div className="relative flex items-center w-full sm:w-auto">
             <Filter className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
             <select
               value={sectorFilter}
               onChange={(e) => setSectorFilter(e.target.value as 'ALL' | SectorType)}
-              className="pl-8 pr-8 py-1.5 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
+              className="w-full sm:w-auto pl-8 pr-8 py-1.5 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
             >
               <option value="ALL" className="bg-slate-900 text-slate-200">
                 Todos los Sectores ({requests.length})

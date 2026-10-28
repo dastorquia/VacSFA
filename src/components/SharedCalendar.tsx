@@ -221,15 +221,15 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
       </div>
 
       {/* Top Controls & Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 p-3 sm:p-4 rounded-xl border border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
           {/* Sector Filter Dropdown (replaces buttons) */}
-          <div className="relative flex items-center">
+          <div className="relative flex items-center w-full sm:w-auto">
             <Filter className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
             <select
               value={selectedSector}
               onChange={(e) => setSelectedSector(e.target.value as 'ALL' | SectorType)}
-              className="pl-8 pr-8 py-1.5 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
+              className="w-full sm:w-auto pl-8 pr-8 py-1.5 text-xs bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none shadow-sm transition-colors"
             >
               <option value="ALL" className="bg-slate-900 text-slate-200">
                 Todos los Sectores ({employees.length})
@@ -251,14 +251,14 @@ export const SharedCalendar: React.FC<SharedCalendarProps> = ({
           </div>
 
           {/* Search box */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
               placeholder="Buscar colaborador..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-44"
+              className="w-full sm:w-44 pl-8 pr-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
